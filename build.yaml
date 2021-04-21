@@ -1,0 +1,7 @@
+builders:
+  translatable:
+    import: "package:fluent_translator_generator/builder.dart"
+    builder_factories: ["fluent", "languageManager"]
+    build_extensions: {".dart": [".g.dart"]}
+    auto_apply: dependents
+    build_to: source

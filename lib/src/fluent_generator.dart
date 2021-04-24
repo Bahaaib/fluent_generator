@@ -16,7 +16,7 @@ class FluentGenerator extends GeneratorForAnnotation<Fluent> {
   FutureOr<String> generateForAnnotatedElement(
       Element element, ConstantReader annotation, BuildStep buildStep) async {
     //In case user provided [Translatable] objects
-    if (annotation.peek('fromCSV').isNull) {
+    if (annotation?.peek('fromCSV')?.isNull ?? true) {
       _generateTranslatableSourceCode(element, annotation);
       return _generatedClassBuffer.toString();
     }
@@ -24,12 +24,12 @@ class FluentGenerator extends GeneratorForAnnotation<Fluent> {
     //In case user provided a CSV file
     String filePath = annotation.peek('fromCSV').stringValue;
 
-    await _generateFromCSVFile(annotation, filePath);
+    await _generateFromCSVFile(element, annotation, filePath);
     return _generatedClassBuffer.toString();
   }
 
   Future<void> _generateFromCSVFile(
-      ConstantReader annotation, String filePath) async {
+      Element element, ConstantReader annotation, String filePath) async {
     String filePath = annotation.peek('fromCSV').stringValue;
 
     final input = new File(filePath).openRead();
@@ -42,7 +42,7 @@ class FluentGenerator extends GeneratorForAnnotation<Fluent> {
     List<String> supportedLocales = _getSupportedLocales(columns);
     List<String> fieldNames = _getFieldNames(columns);
 
-    _buildClassImports();
+    _buildClassImports(element);
     _addLineBreak();
     _addClassName("AppStrings");
     _addLineBreak();
@@ -51,7 +51,6 @@ class FluentGenerator extends GeneratorForAnnotation<Fluent> {
     _buildClassFieldsForFile(fieldNames);
     _addLineBreak();
     _addBlockClosingBracket();
-    print(columns);
   }
 
   void _buildTranslationsMapFromFile(List<String> supportedLocales,
@@ -111,7 +110,7 @@ class FluentGenerator extends GeneratorForAnnotation<Fluent> {
       for (List<dynamic> row in rows) {
         if (row[i].toString() == '') return columns;
         print(row[i]);
-        columnCell.add(row[i]);
+        columnCell.add(row[i].toString());
       }
 
       columns.add(columnCell);
@@ -124,7 +123,7 @@ class FluentGenerator extends GeneratorForAnnotation<Fluent> {
     //Evaluate annotation inputs before start generation
     _evaluateAnnotationInputs(annotation);
 
-    _buildClassImports();
+    _buildClassImports(element);
     _addLineBreak();
     _addClassName("AppStrings");
     _addLineBreak();
@@ -201,8 +200,9 @@ class FluentGenerator extends GeneratorForAnnotation<Fluent> {
     return supportedLanguages;
   }
 
-  void _buildClassImports() {
-    _addClassImport("../language/strings.manager.gen.dart");
+  void _buildClassImports(Element element) {
+    String fileName = element.source.shortName.replaceAll('.dart', '');
+    _addClassImport("../language/$fileName.manager.gen.dart");
   }
 
   void _addClassImport(String import, {String as}) {

@@ -29,6 +29,8 @@ class LanguageManagerGenerator extends GeneratorForAnnotation<Fluent> {
     _addLineBreak();
     _buildInitFunction();
     _addLineBreak();
+    _buildFetchCachedLanguageFunction();
+    _addLineBreak();
     _buildDefaultLanguageFunction();
     _addLineBreak();
     _buildServerLocaleFunction();
@@ -37,6 +39,7 @@ class LanguageManagerGenerator extends GeneratorForAnnotation<Fluent> {
     _addLineBreak();
     _buildDisposeFunction();
     _addBlockClosingBracket();
+    _buildLanguageSourceEnum();
   }
 
   void _evaluateAnnotationInputs(ConstantReader annotation) {
@@ -65,14 +68,38 @@ class LanguageManagerGenerator extends GeneratorForAnnotation<Fluent> {
         .writeln("static final Fly _fly = GetIt.instance<Fly>();");
     _generatedClassBuffer.writeln(
         "static final PublishSubject<String> languageSubject = PublishSubject();");
+    _generatedClassBuffer.writeln(
+        "static final SharedPreferencesProvider _sharedPreferencesProvider = SharedPreferencesProvider();");
     _generatedClassBuffer
         .writeln("static String currentCode = \"$defaultLocale\";");
     _generatedClassBuffer.writeln("static String _selectedLangCode;");
   }
 
   void _buildInitFunction() {
-    _generatedClassBuffer.writeln("static void init() {");
-    _generatedClassBuffer.writeln("_getDeviceDefaultLanguage();");
+    _generatedClassBuffer
+        .writeln("static Future<void> init({LanguageSource source}) async {");
+    _generatedClassBuffer
+        .writeln("if (source == LanguageSource.LOCAL_CACHE) {");
+    _generatedClassBuffer.writeln("await _fetchCachedLanguage();");
+    _generatedClassBuffer.writeln("return;");
+    _addBlockClosingBracket();
+    _generatedClassBuffer.writeln(" _getDeviceDefaultLanguage();");
+    _addBlockClosingBracket();
+  }
+
+  void _buildFetchCachedLanguageFunction() {
+    _generatedClassBuffer
+        .writeln("static Future<void> _fetchCachedLanguage() async {");
+    _generatedClassBuffer.writeln(
+        "_selectedLangCode = await _sharedPreferencesProvider.getLanguage();");
+    _addLineBreak();
+    _generatedClassBuffer.writeln(
+        "assert(_selectedLangCode != null, 'Shared Preferences has no cached value for language');");
+    _addLineBreak();
+    _addComment("//Header for non-logged requests");
+    _generatedClassBuffer
+        .writeln("_fly.addHeaders({\"Lang\": _selectedLangCode});");
+    _generatedClassBuffer.writeln("_setCurrentLocal(_selectedLangCode);");
     _addBlockClosingBracket();
   }
 
@@ -90,26 +117,33 @@ class LanguageManagerGenerator extends GeneratorForAnnotation<Fluent> {
 
   void _buildServerLocaleFunction() {
     _generatedClassBuffer.writeln(
-        "static Future<void> setServerLocale({String id, String language, String languageNodeName}) async {");
-    _generatedClassBuffer.writeln("_setCurrentLocal(_selectedLangCode);");
+        "static Future<void> setServerLocale({String id, String language, String languageNodeName, bool locallyCache = false}) async {");
+    _generatedClassBuffer.writeln("if (locallyCache) {");
+    _generatedClassBuffer
+        .writeln("await _sharedPreferencesProvider.setLanguage(language);");
+    _addBlockClosingBracket();
+    _generatedClassBuffer.writeln("_setCurrentLocal(language);");
     _addLineBreak();
     _addComment("//Header for non-logged requests");
-    _generatedClassBuffer
-        .writeln("_fly.addHeaders({\"Lang\": _selectedLangCode});");
+    _generatedClassBuffer.writeln("_fly.addHeaders({\"Lang\": language});");
     _addLineBreak();
     _generatedClassBuffer.writeln("if (id == null) return;");
     _addLineBreak();
+    _generatedClassBuffer.writeln("try {");
     _addComment("//Request For logged Users");
     _generatedClassBuffer.writeln("Node changeLanguageNode = Node(");
     _generatedClassBuffer.writeln("name: languageNodeName,");
     _generatedClassBuffer.writeln("args: {");
     _generatedClassBuffer.writeln("'id': id,");
-    _generatedClassBuffer.writeln("'locale': _selectedLangCode,");
+    _generatedClassBuffer.writeln("'locale': language,");
     _generatedClassBuffer.writeln("},");
     _generatedClassBuffer.writeln("cols: ['locale'],");
     _generatedClassBuffer.writeln(");");
     _addLineBreak();
     _generatedClassBuffer.writeln("await _fly.mutation([changeLanguageNode]);");
+    _generatedClassBuffer.writeln("} catch (error) {");
+    _generatedClassBuffer.writeln("rethrow;");
+    _addBlockClosingBracket();
     _addBlockClosingBracket();
   }
 
@@ -127,6 +161,11 @@ class LanguageManagerGenerator extends GeneratorForAnnotation<Fluent> {
     _addBlockClosingBracket();
   }
 
+  void _buildLanguageSourceEnum() {
+    _generatedClassBuffer
+        .writeln("enum LanguageSource { DEVICE, LOCAL_CACHE }");
+  }
+
   void _buildClassImports() {
     _addClassImport("dart:async");
     _addClassImport("package:fly_networking/GraphQB/graph_qb.dart");
@@ -134,6 +173,7 @@ class LanguageManagerGenerator extends GeneratorForAnnotation<Fluent> {
     _addClassImport("package:get_it/get_it.dart");
     _addClassImport("package:rxdart/rxdart.dart");
     _addClassImport("dart:ui", as: "ui");
+    _addClassImport("../provider/shared_preferences_provider.dart");
   }
 
   void _addClassName(String name) {

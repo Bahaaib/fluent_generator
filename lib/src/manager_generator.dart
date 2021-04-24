@@ -110,8 +110,9 @@ class LanguageManagerGenerator extends GeneratorForAnnotation<Fluent> {
     _generatedClassBuffer.writeln(
         "_selectedLangCode = await _sharedPreferencesProvider.getLanguage();");
     _addLineBreak();
-    _generatedClassBuffer.writeln(
-        "assert(_selectedLangCode != null, 'Shared Preferences has no cached value for language');");
+    _generatedClassBuffer.writeln("if (_selectedLangCode == null) {");
+    _generatedClassBuffer.writeln("_getDeviceDefaultLanguage();");
+    _addBlockClosingBracket();
     _addLineBreak();
     _addComment("//Header for non-logged requests");
     _generatedClassBuffer

@@ -27,6 +27,8 @@ class LanguageManagerGenerator extends GeneratorForAnnotation<Fluent> {
     _addClassName("LanguageManager");
     _buildClassFields(annotation);
     _addLineBreak();
+    buildSubscribeToLanguageStreamFunction();
+    _addLineBreak();
     _buildInitFunction();
     _addLineBreak();
     _buildFetchCachedLanguageFunction();
@@ -67,17 +69,32 @@ class LanguageManagerGenerator extends GeneratorForAnnotation<Fluent> {
     _generatedClassBuffer
         .writeln("static final Fly _fly = GetIt.instance<Fly>();");
     _generatedClassBuffer.writeln(
-        "static final PublishSubject<String> languageSubject = PublishSubject();");
+        "static final PublishSubject<String> _languageSubject = PublishSubject();");
     _generatedClassBuffer.writeln(
         "static final SharedPreferencesProvider _sharedPreferencesProvider = SharedPreferencesProvider();");
     _generatedClassBuffer
-        .writeln("static String currentCode = \"$defaultLocale\";");
+        .writeln("static String _currentCode = \"$defaultLocale\";");
     _generatedClassBuffer.writeln("static String _selectedLangCode;");
+    _generatedClassBuffer.writeln(
+        "static StreamSubscription Function(dynamic) onLanguageChanged;");
+    _addLineBreak();
+    _generatedClassBuffer
+        .writeln("static String get currentCode => _currentCode;");
+    _addLineBreak();
+  }
+
+  void buildSubscribeToLanguageStreamFunction() {
+    _generatedClassBuffer.writeln("static void _subscribeToLanguageStream() {");
+    _generatedClassBuffer.writeln("_languageSubject.listen((language) {");
+    _generatedClassBuffer.writeln("onLanguageChanged(language);");
+    _generatedClassBuffer.writeln("});");
+    _addBlockClosingBracket();
   }
 
   void _buildInitFunction() {
     _generatedClassBuffer
         .writeln("static Future<void> init({LanguageSource source}) async {");
+    _generatedClassBuffer.writeln("_subscribeToLanguageStream();");
     _generatedClassBuffer
         .writeln("if (source == LanguageSource.LOCAL_CACHE) {");
     _generatedClassBuffer.writeln("await _fetchCachedLanguage();");
@@ -150,14 +167,14 @@ class LanguageManagerGenerator extends GeneratorForAnnotation<Fluent> {
   void _buildCurrentLocaleFunction() {
     _generatedClassBuffer
         .writeln("static void _setCurrentLocal(String code) {");
-    _generatedClassBuffer.writeln("currentCode = code;");
-    _generatedClassBuffer.writeln("languageSubject.add(currentCode);");
+    _generatedClassBuffer.writeln("_currentCode = code;");
+    _generatedClassBuffer.writeln("_languageSubject.add(_currentCode);");
     _addBlockClosingBracket();
   }
 
   void _buildDisposeFunction() {
-    _generatedClassBuffer.writeln("static void disposeLanguageSubject() {");
-    _generatedClassBuffer.writeln("languageSubject.close();");
+    _generatedClassBuffer.writeln("static void dispose() {");
+    _generatedClassBuffer.writeln("_languageSubject.close();");
     _addBlockClosingBracket();
   }
 

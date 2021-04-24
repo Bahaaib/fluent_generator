@@ -13,3 +13,7 @@
 ## [0.0.4]
 
 * fixed dependency issue
+
+## [0.1.0]
+
+* encapsulated unnecessary public fields

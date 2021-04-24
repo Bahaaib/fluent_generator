@@ -1,6 +1,6 @@
 name: fluent_translator_generator
 description: A code generator for fluent_translator package.
-version: 0.0.4
+version: 0.1.0
 repository: https://github.com/Bahaaib/fluent_generator
 
 environment:
